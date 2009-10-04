@@ -1,5 +1,6 @@
 ;; textmate.el --- TextMate behaviour on Emacs
 ;; Copyright (C) 2008  Orestis Markou
+;; (Modified by Alex Duller 2009)
 
 ;; This program is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU General Public License
