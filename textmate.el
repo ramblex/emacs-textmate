@@ -55,11 +55,10 @@
   :group 'textmate)
 (make-variable-buffer-local 'tm/dont-activate)
 
-(defcustom tm/use-newline-and-indent t
+(defcustom tm/use-newline-and-indent nil
   "If set to t, use newline-and-indent for [return key]."
   :type 'boolean
   :group 'textmate)
-(make-variable-buffer-local 'tm/use-newline-and-indent)
 
 (defcustom tm/exempt-quote-modes '(emacs-lisp-mode lisp-mode)
   "Modes which in which to not auto-insert a quote"
@@ -116,7 +115,7 @@
 (defun tm/newline-and-indent ()
   "Enable users to decide whether or not to use newline-and-indent"
   (interactive)
-  (if tm/use-newline-and-indent
+  (if (eq tm/use-newline-and-indent t)
       (newline-and-indent)
     (newline)))
 
@@ -173,7 +172,7 @@
 (defun tm/move-over-square ()  (interactive)(tm/move-over ?\]))
 (defun tm/move-over-quote ()  
   (interactive)
-  (if (eq (member major-mode tm/exempt-quote-modes-alist) nil)
+  (if (eq (member major-mode tm/exempt-quote-modes) nil)
       (tm/move-over ?\')
     (insert-char ?\' 1)))
 (defun tm/move-over-dbl-quote ()  (interactive)(tm/move-over ?\")) 
