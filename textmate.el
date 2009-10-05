@@ -60,7 +60,9 @@
   :type 'boolean
   :group 'textmate)
 
-(defcustom tm/exempt-quote-modes '(emacs-lisp-mode lisp-mode)
+(defcustom tm/exempt-quote-modes '(emacs-lisp-mode 
+                                   lisp-mode 
+                                   lisp-interaction-mode)
   "Modes which in which to not auto-insert a quote"
   :type '(repeat symbol)
   :group 'textmate)
@@ -99,9 +101,9 @@
             (")" . tm/move-over-bracket)
             ("]" . tm/move-over-square)
             ("}" . tm/move-over-curly)
-            ("[" . skeleton-pair-insert-maybe)
-            ("(" . skeleton-pair-insert-maybe)
-            ("{" . skeleton-pair-insert-maybe)
+            ("[" . tm/insert-brace)
+            ("(" . tm/insert-brace)
+            ("{" . tm/insert-brace)
             ;; Duplicate TextMate's auto-indent
             ([return] . tm/newline-and-indent)
             ;; Duplicate TextMate's command-return
@@ -165,7 +167,13 @@
    one"
   (if (eq (char-after) char)
       (funcall (cdr (assoc char pushovers)))
-    (funcall (cdr (assoc char defaults)))))
+    (funcall (cdr (assoc char defaults))))
+  (indent-according-to-mode))
+
+(defun tm/insert-brace ()
+  (interactive)
+  (skeleton-pair-insert-maybe nil)
+  (indent-according-to-mode))
 
 (defun tm/move-over-bracket ()  (interactive)(tm/move-over ?\)))
 (defun tm/move-over-curly ()  (interactive)(tm/move-over ?\}))
