@@ -44,13 +44,18 @@
   "Textmate minor mode"
   :group 'editor)
 
-(defcustom tm/use-tm-goto-line nil
-  "If set to t, use M-l to go to line"
+(defcustom tm/use-goto-line nil
+  "If set to t, use \M-l to go to line"
   :type 'boolean
   :group 'textmate)
 
 (defcustom tm/backspace-delete-column nil
   "If set to t, backspace will delete a block os spaces based on tab-width"
+  :type 'boolean
+  :group 'textmate)
+
+(defcustom tm/use-open-next-line t
+  "If set to t, use \M-\r to start a new line"
   :type 'boolean
   :group 'textmate)
 
@@ -60,15 +65,10 @@
   :group 'textmate)
 (make-variable-buffer-local 'tm/dont-activate)
 
-(defcustom tm/use-newline-and-indent nil
-  "If set to t, use newline-and-indent for [return key]."
-  :type 'boolean
-  :group 'textmate)
-
 (defcustom tm/exempt-quote-modes '(emacs-lisp-mode
                                    lisp-mode
                                    lisp-interaction-mode)
-  "Modes which in which to not auto-insert a quote"
+  "Modes which should not auto-insert a quote"
   :type '(repeat symbol)
   :group 'textmate)
 
@@ -108,29 +108,33 @@
             ("}" . tm/move-over-curly)
             ("[" . tm/insert-brace)
             ("(" . tm/insert-brace)
-            ("{" . tm/insert-brace)
-            ;; Duplicate TextMate's auto-indent
-            ([return] . tm/newline-and-indent)
-            ;; Duplicate TextMate's command-return
-            ("\M-\r" . tm/open-next-line)
-            ;; Duplicate TextMate's goto line
-            ("\M-l" . goto-line))
+            ("{" . tm/insert-brace))
   :group 'textmate
   (progn
-    (setq skeleton-pair t)))
+    (setq skeleton-pair t)
+    ;; Optional bindings
+    (tm/goto-line)
+    (tm/open-next-line-binding)))
 
-(defun tm/newline-and-indent ()
-  "Enable users to decide whether or not to use newline-and-indent"
-  (interactive)
-  (if (eq tm/use-newline-and-indent t)
-      (newline-and-indent)
-    (newline)))
+(defun tm/goto-line ()
+  "Enable users to decide whether or not to use \M-l as goto-line"
+  (let ((tm/goto-line-map (make-sparse-keymap)))
+      (define-key tm/goto-line-map "\M-l" 'goto-line)
+      (add-to-list 'minor-mode-map-alist 
+                   (cons 'tm/use-goto-line tm/goto-line-map))))
+
+(defun tm/open-next-line-binding ()
+  "Enable users to decide whether or not to use \M-\r to start a new line"
+  (let ((tm/open-next-line-map (make-sparse-keymap)))
+    (define-key tm/open-next-line-map "\M-\r" 'tm/open-next-line)
+    (add-to-list 'minor-mode-map-alist
+                 (cons 'tm/use-open-next-line tm/open-next-line-map))))
 
 (defun tm/open-next-line()
   "Function to open and goto indented next line"
   (interactive)
   (move-end-of-line nil)
-  (tm/newline-and-indent))
+  (newline-and-indent))
 
 ;; The pairs that are supported by this mode
 (setq textmate-pairs '(( ?\( . ?\) )
@@ -143,6 +147,7 @@
   "Check if a pair are next to each other. This is used to allow easy deletion"
   (interactive)
   (eq (cdr (assoc (char-before)  textmate-pairs)) (char-after)))
+
 ;; Thanks to Trey Jackson
 ;; http://stackoverflow.com/questions/1450169/how-do-i-emulate-vims-softtabstop-in-emacs/1450454#1450454
 (defun tm/backward-delete-whitespace-to-column ()
@@ -187,6 +192,7 @@ or just one char if that's not possible"
 (defun tm/move-over (char)
   "If the user has manually inserted the trailing char, don't insert another
    one"
+  (interactive)
   (if (eq (char-after) char)
       (funcall (cdr (assoc char pushovers)))
     (funcall (cdr (assoc char defaults))))
