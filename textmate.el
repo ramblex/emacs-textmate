@@ -1,6 +1,5 @@
-;; textmate.el --- TextMate behaviour on Emacs
-;; Copyright (C) 2008  Orestis Markou
-;; (Modified by Alex Duller 2009)
+;; textmate.el --- TextMate behaviour in Emacs
+;; Copyright 2009 Alex Duller
 
 ;; This program is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU General Public License
@@ -44,8 +43,23 @@
   "Textmate minor mode"
   :group 'editor)
 
+(setq skeleton-pair-alist
+      '((?\( _ ?\))
+	(?[  _ ?])
+	(?{  _ ?})
+	(?\" _ ?\")
+        (?\' _ ?\')))
+
+(defcustom tm/non-insert-alist '((emacs-lisp-mode . '(?\'))
+                              (lisp-mode . '(?\'))
+                              (lisp-interaction-mode . '(?\')))
+  "The format of this list is '(major-mode . '(chars)) where the given list of
+chars are not auto-inserted in major-mode"
+  :type '(alist :key-type symbol :value-type alist)
+  :group 'textmate)
+
 (defcustom tm/use-goto-line nil
-  "If set to t, use \M-l to go to line"
+  "If set to t, use M-l to go to line"
   :type 'boolean
   :group 'textmate)
 
@@ -55,7 +69,7 @@
   :group 'textmate)
 
 (defcustom tm/use-open-next-line t
-  "If set to t, use \M-\r to start a new line"
+  "If set to t, use M-\r to start a new line"
   :type 'boolean
   :group 'textmate)
 
@@ -74,6 +88,8 @@
 
 (defun tm/initialize ()
   "Do the necessary initialization"
+  (setq skeleton-pair t)
+  (tm/set-keymap)
   (add-hook 'after-change-major-mode-hook
             'tm/minor-mode-auto-on))
 
@@ -90,6 +106,19 @@
   (interactive)
   (tm/minor-mode nil))
 
+(defvar tm/minor-mode-map (make-sparse-keymap)
+  "Keymap for tm/minor-mode bindings")
+
+(defun tm/set-keymap ()
+  "Automatically determine the appropriate key bindings"
+  (define-key tm/minor-mode-map [backspace] 'tm/pair-backspace)
+  (dolist (arg skeleton-pair-alist)
+    (define-key tm/minor-mode-map (string (car arg)) 'tm/pair-insert)
+    (define-key tm/minor-mode-map (string (car (last arg))) 'tm/pair-insert))
+  (tm/goto-line)
+  (tm/open-next-line-binding)
+  (add-to-list 'minor-mode-map-alist (cons 'tm/minor-mode tm/minor-mode-map)))
+
 (define-minor-mode tm/minor-mode
   "Toggle Textmate mode.
      With no argument, this command toggles the mode.
@@ -100,31 +129,17 @@
   ;; The indicator for the mode line.
   :lighter " TM"
   ;; The minor mode bindings.
-  :keymap '(([backspace] . tm/backspace)
-            ("\"" . tm/move-over-dbl-quote)
-            ("\'" . tm/move-over-quote)
-            (")" . tm/move-over-bracket)
-            ("]" . tm/move-over-square)
-            ("}" . tm/move-over-curly)
-            ("[" . tm/insert-brace)
-            ("(" . tm/insert-brace)
-            ("{" . tm/insert-brace))
-  :group 'textmate
-  (progn
-    (setq skeleton-pair t)
-    ;; Optional bindings
-    (tm/goto-line)
-    (tm/open-next-line-binding)))
+  :group 'textmate)
 
 (defun tm/goto-line ()
-  "Enable users to decide whether or not to use \M-l as goto-line"
+  "Enable users to decide whether or not to use M-l as goto-line"
   (let ((tm/goto-line-map (make-sparse-keymap)))
-      (define-key tm/goto-line-map "\M-l" 'goto-line)
-      (add-to-list 'minor-mode-map-alist 
-                   (cons 'tm/use-goto-line tm/goto-line-map))))
+    (define-key tm/goto-line-map "\M-l" 'goto-line)
+    (add-to-list 'minor-mode-map-alist 
+		 (cons 'tm/use-goto-line tm/goto-line-map))))
 
 (defun tm/open-next-line-binding ()
-  "Enable users to decide whether or not to use \M-\r to start a new line"
+  "Enable users to decide whether or not to use M-\r to start a new line"
   (let ((tm/open-next-line-map (make-sparse-keymap)))
     (define-key tm/open-next-line-map "\M-\r" 'tm/open-next-line)
     (add-to-list 'minor-mode-map-alist
@@ -136,17 +151,58 @@
   (move-end-of-line nil)
   (newline-and-indent))
 
-;; The pairs that are supported by this mode
-(setq textmate-pairs '(( ?\( . ?\) )
-                       (  ?\' . ?\' )
-                       (  ?\" . ?\" )
-                       (  ?[ . ?] )
-                       (  ?{ . ?} )))
+;; The following set of functions are taken from 
+;; http://www.emacswiki.org/emacs/AutoPairs#toc2
+(defun tm/pair-insert (arg)
+  (interactive "P")
+  (let ((ignore-list (car (last (assoc major-mode tm/non-insert-alist)))))
+    (cond
+     ((member last-command-char ignore-list)
+      (insert-char last-command-char 1))
+     ((assq last-command-char skeleton-pair-alist)
+      (tm/pair-open arg))
+     (t
+      (tm/pair-close arg)))))
 
-(defun tm/is-empty-pair ()
-  "Check if a pair are next to each other. This is used to allow easy deletion"
-  (interactive)
-  (eq (cdr (assoc (char-before)  textmate-pairs)) (char-after)))
+(defun tm/pair-open (arg)
+  (interactive "P")
+  (let ((pair (assq last-command-char
+		    skeleton-pair-alist)))
+    (cond
+     ((and (not mark-active)
+	   (eq (car pair) (car (last pair)))
+	   (eq (car pair) (char-after)))
+      (tm/pair-close arg))
+     (t
+      (skeleton-pair-insert-maybe arg)))))
+
+(defun tm/pair-close (arg)
+  (interactive "P")
+  (cond
+   (mark-active
+    (let (pair open)
+      (dolist (pair skeleton-pair-alist)
+	(when (eq last-command-char (car (last pair)))
+	  (setq open (car pair))))
+      (setq last-command-char open)
+      (skeleton-pair-insert-maybe arg)))
+   ((looking-at
+     (concat "[ \t\n]*"
+	     (regexp-quote (string last-command-char))))
+    (replace-match (string last-command-char))
+    (indent-according-to-mode))
+   (t
+    (self-insert-command (prefix-numeric-value arg))
+    (indent-according-to-mode))))
+
+(defun tm/pair-backspace (arg)
+  (interactive "p")
+  (if (eq (char-after)
+	  (car (last (assq (char-before) skeleton-pair-alist))))
+      (and (char-after) (delete-char 1)))
+  (if (eq tm/backspace-delete-column t)
+      (tm/backward-delete-whitespace-to-column)
+    (delete-backward-char 1)))
 
 ;; Thanks to Trey Jackson
 ;; http://stackoverflow.com/questions/1450169/how-do-i-emulate-vims-softtabstop-in-emacs/1450454#1450454
@@ -162,55 +218,6 @@ or just one char if that's not possible"
       (save-match-data
         (if (string-match "\\w*\\(\\s-+\\)$" (buffer-substring-no-properties (- p movement) p))
             (backward-delete-char-untabify (- (match-end 1) (match-beginning 1)))
-        (call-interactively 'backward-delete-char-untabify))))))
-
-(defun tm/backspace ()
-  (interactive)
-  (if (eq (char-after) nil)
-      nil   ;; if char-after is nil, just backspace
-    (if (tm/is-empty-pair)
-        (delete-char 1)))
-  (if (eq tm/backspace-delete-column t)
-      (tm/backward-delete-whitespace-to-column)
-    (delete-backward-char 1)))
-
-;; These are used when user has manually inserted the trailing char of a pair
-(setq pushovers
-      '((?\" . (lambda () (forward-char 1) ))
-        (?\' . (lambda () (forward-char 1) ))
-        (?\) . (lambda () (up-list 1) ))
-        (?\] . (lambda () (up-list 1) ))
-        (?\} . (lambda () (up-list 1) ))))
-
-(setq defaults
-      '((?\" . (lambda () (skeleton-pair-insert-maybe nil)))
-        (?\' . (lambda () (skeleton-pair-insert-maybe nil)))
-        (?\) . (lambda () (insert-char ?\) 1) ))
-        (?\] . (lambda () (insert-char ?\] 1) ))
-        (?\} . (lambda () (insert-char ?\} 1) ))))
-
-(defun tm/move-over (char)
-  "If the user has manually inserted the trailing char, don't insert another
-   one"
-  (interactive)
-  (if (eq (char-after) char)
-      (funcall (cdr (assoc char pushovers)))
-    (funcall (cdr (assoc char defaults))))
-  (indent-according-to-mode))
-
-(defun tm/insert-brace ()
-  (interactive)
-  (skeleton-pair-insert-maybe nil)
-  (indent-according-to-mode))
-
-(defun tm/move-over-bracket ()  (interactive)(tm/move-over ?\)))
-(defun tm/move-over-curly ()  (interactive)(tm/move-over ?\}))
-(defun tm/move-over-square ()  (interactive)(tm/move-over ?\]))
-(defun tm/move-over-quote ()
-  (interactive)
-  (if (eq (member major-mode tm/exempt-quote-modes) nil)
-      (tm/move-over ?\')
-    (insert-char ?\' 1)))
-(defun tm/move-over-dbl-quote ()  (interactive)(tm/move-over ?\"))
+	  (call-interactively 'backward-delete-char-untabify))))))
 
 (provide 'textmate)
