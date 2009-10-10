@@ -18,12 +18,15 @@ Installation
 ------------
 
 The following gives a basic setup procedure to get emacs-textmate up and running
-1. Obtain the source code (git clone git://github.com/ramblex/emacs-textmate.git)
+
+1. Obtain the source code (`git clone git://github.com/ramblex/emacs-textmate.git`)
 2. Move the emacs-textmate directory to somewhere sensible e.g. ~/.emacs.d/
 3. Add the following to your .emacs:
-  pre. (add-to-list 'load-path "~/.emacs.d/emacs-textmate")
-       (require 'textmate)
-       (tm/initialize)
+
+        (add-to-list 'load-path "~/.emacs.d/emacs-textmate")
+        (require 'textmate)
+        (tm/initialize)
+
 
 Defaults
 --------
