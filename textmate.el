@@ -51,8 +51,8 @@
         (?\' _ ?\')))
 
 (defcustom tm/non-insert-alist '((emacs-lisp-mode . '(?\'))
-                              (lisp-mode . '(?\'))
-                              (lisp-interaction-mode . '(?\')))
+                                 (lisp-mode . '(?\'))
+                                 (lisp-interaction-mode . '(?\')))
   "The format of this list is '(major-mode . '(chars)) where the given list of
 chars are not auto-inserted in major-mode"
   :type '(alist :key-type symbol :value-type alist)
@@ -78,13 +78,6 @@ chars are not auto-inserted in major-mode"
   :type 'boolean
   :group 'textmate)
 (make-variable-buffer-local 'tm/dont-activate)
-
-(defcustom tm/exempt-quote-modes '(emacs-lisp-mode
-                                   lisp-mode
-                                   lisp-interaction-mode)
-  "Modes which should not auto-insert a quote"
-  :type '(repeat symbol)
-  :group 'textmate)
 
 (defun tm/initialize ()
   "Do the necessary initialization"
@@ -135,7 +128,7 @@ chars are not auto-inserted in major-mode"
   "Enable users to decide whether or not to use M-l as goto-line"
   (let ((tm/goto-line-map (make-sparse-keymap)))
     (define-key tm/goto-line-map "\M-l" 'goto-line)
-    (add-to-list 'minor-mode-map-alist 
+    (add-to-list 'minor-mode-map-alist
 		 (cons 'tm/use-goto-line tm/goto-line-map))))
 
 (defun tm/open-next-line-binding ()
@@ -151,7 +144,7 @@ chars are not auto-inserted in major-mode"
   (move-end-of-line nil)
   (newline-and-indent))
 
-;; The following set of functions are taken from 
+;; The following set of functions are taken from
 ;; http://www.emacswiki.org/emacs/AutoPairs#toc2
 (defun tm/pair-insert (arg)
   (interactive "P")
