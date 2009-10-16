@@ -180,11 +180,6 @@ chars are not auto-inserted in major-mode"
 	  (setq open (car pair))))
       (setq last-command-event open)
       (skeleton-pair-insert-maybe arg)))
-   ((looking-at
-     (concat "[ \t\n]*"
-	     (regexp-quote (string last-command-event))))
-    (replace-match (string last-command-event))
-    (indent-according-to-mode))
    (t
     (self-insert-command (prefix-numeric-value arg))
     (indent-according-to-mode))))
