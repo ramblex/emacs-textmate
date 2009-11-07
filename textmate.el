@@ -144,17 +144,18 @@ chars are not auto-inserted in major-mode"
   (move-end-of-line nil)
   (newline-and-indent))
 
-;; The following set of functions are taken from
+;; The following set of functions are adapted from
 ;; http://www.emacswiki.org/emacs/AutoPairs#toc2
 (defun tm/pair-insert (arg)
   (interactive "P")
-  (let ((ignore-list (car (last (assoc major-mode tm/non-insert-alist)))))
+  (let ((ignore-list (car (last (assoc major-mode tm/non-insert-alist))))
+        (keys (recent-keys)))
     (cond
      ((member last-command-event ignore-list)
       (insert-char last-command-event 1))
      ((assq last-command-event skeleton-pair-alist)
       (tm/pair-open arg))
-     ((assq (elt (recent-keys) 298) skeleton-pair-alist)
+     ((assq (elt keys (- (length keys) 2)) skeleton-pair-alist)
       (forward-char))
      (t
       (tm/pair-close arg)))
