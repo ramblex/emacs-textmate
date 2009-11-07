@@ -154,6 +154,8 @@ chars are not auto-inserted in major-mode"
       (insert-char last-command-event 1))
      ((assq last-command-event skeleton-pair-alist)
       (tm/pair-open arg))
+     ((assq (elt (recent-keys) 298) skeleton-pair-alist)
+      (forward-char))
      (t
       (tm/pair-close arg)))
     (indent-according-to-mode)))
